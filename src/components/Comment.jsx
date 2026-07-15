@@ -1,15 +1,30 @@
 import { Box, TextField, Divider, ListItem, ListItemText, Stack, Button } from "@mui/material";
-import { db } from "../firebase";
+import { db, storageService } from "../firebase";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { ref, deleteObject } from "firebase/storage";
 import { useState } from "react";
+
 
 export default function Comment({ item, isShown }) {
   const [edit, setEdit] = useState(false);
   const [comment, setComment] = useState(item.comment);
 
+
   const handleDelete = async () => {
     if (!window.confirm("정말 삭제할까요?")) return;
-    await deleteDoc(doc(db, "comments", item.id));
+    try {
+      await deleteDoc(doc(db, "comments", item.id));
+
+
+      if (item.image) {
+        const storage = storageService;
+        const storageRef = ref(storage, item.image);
+        await deleteObject(storageRef);
+      }
+    } catch (error) {
+      console.error("삭제오류", error);
+      alert("삭제중 오류가 발생했습니다.");
+    }
   };
   const toggleEditMode = () => {
     setEdit(prev => !prev);
@@ -18,12 +33,14 @@ export default function Comment({ item, isShown }) {
     e.preventDefault();
     const commentRef = doc(db, "comments", item.id);
 
+
     // Set the "capital" field of the city 'DC'
     await updateDoc(commentRef, {
       comment: comment,
     });
     setEdit(false);
   };
+
 
   const handleChange = e => {
     setComment(e.target.value);
